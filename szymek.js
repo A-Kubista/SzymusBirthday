@@ -6,7 +6,7 @@ let currentRow = 0;
 let isDrawing = false;
 let activeCanvas = null;
 const CARDS_PER_ROW = 3;
-const SETS_BEFORE_VIDEO = 2;
+const SETS_BEFORE_VIDEO = 5;
 
 // Text and color arrays
 const birthdayTexts = [
@@ -157,7 +157,7 @@ function handleScratch(e) {
           
           // Draw the scratch
           ctx.beginPath();
-          ctx.arc(x, y, 30, 0, Math.PI * 2);
+          ctx.arc(x, y, 45, 0, Math.PI * 2);
           ctx.fill();
 
           // For smooth line between points
