@@ -4,7 +4,7 @@ let revealedCount = 0;
 let revealedSets = 0;
 let currentRow = 0;
 const CARDS_PER_ROW = 3;
-const SETS_BEFORE_VIDEO = 2;
+const SETS_BEFORE_VIDEO = 4;
 
 // Text and color arrays
 const birthdayTexts = [
