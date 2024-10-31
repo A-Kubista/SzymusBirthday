@@ -3,15 +3,49 @@ let videoPlayed = false;
 let revealedCount = 0;
 let revealedSets = 0;
 let currentRow = 0;
-const SETS_BEFORE_VIDEO = 2;
-const totalCards = 3;
 const CARDS_PER_ROW = 3;
+const SETS_BEFORE_VIDEO = 2;
 
-// Generate image arrays with numbered format
+// Text and color arrays
+const birthdayTexts = [
+    "Happy Birthday Szymek! 🎉",
+    "You're Awesome! 🌟",
+    "Best Friend Ever! 🎈",
+    "Party Time! 🎊",
+    "Make a Wish! ⭐",
+    "Birthday Boy! 🎂",
+    "Celebrate Good Times! 🎵",
+    "Another Amazing Year! 🎁",
+    "Keep Smiling! 😊",
+    "You Rock! 🤘",
+    "Time to Celebrate! 🥳",
+    "Birthday Legend! 👑",
+    "Special Day! 💫",
+    "Fantastic Friend! 🌈"
+];
+
+const cardColors = [
+    "#FF6B6B", // Red
+    "#4ECDC4", // Teal
+    "#45B7D1", // Blue
+    "#96CEB4", // Mint
+    "#FFEEAD", // Yellow
+    "#D4A5A5", // Pink
+    "#9B59B6", // Purple
+    "#3498DB", // Blue
+    "#E67E22", // Orange
+    "#2ECC71", // Green
+    "#F1C40F", // Yellow
+    "#E74C3C", // Red
+    "#1ABC9C", // Turquoise
+    "#34495E"  // Navy
+];
+
+// Generate image array with numbered format
 const allImagePairs = Array.from({ length: 14 }, (_, i) => ({
-    top: `${i + 1}.jpg`,
-    bottom: `${i + 1}.jpg`,
-    caption: `Picture ${i + 1}`
+    image: `${i + 1}.jpg`,
+    text: birthdayTexts[i],
+    color: cardColors[i]
 }));
 
 const headImages = Array.from({ length: 14 }, (_, i) => `${i + 1}.jpg`);
@@ -25,6 +59,34 @@ document.addEventListener('contextmenu', function(e) {
 document.addEventListener('dragstart', function(e) {
     e.preventDefault();
     return false;
+});
+
+document.addEventListener('keydown', function(e) {
+    if (
+        (e.ctrlKey && (
+            e.keyCode === 67 || // Ctrl+C
+            e.keyCode === 86 || // Ctrl+V
+            e.keyCode === 85 || // Ctrl+U
+            e.keyCode === 83 || // Ctrl+S
+            e.keyCode === 80 || // Ctrl+P
+            e.keyCode === 123   // F12
+        )) ||
+        e.keyCode === 123 ||    // F12
+        (e.ctrlKey && e.shiftKey && 
+            (e.keyCode === 73 || // Ctrl+Shift+I
+             e.keyCode === 74)    // Ctrl+Shift+J
+        )
+    ) {
+        e.preventDefault();
+        return false;
+    }
+});
+
+// Add click handler to close video manually
+document.querySelector('.video-container').addEventListener('click', (e) => {
+    if (e.target.classList.contains('video-container')) {
+        e.target.classList.remove('visible');
+    }
 });
 
 // Utility functions
@@ -79,8 +141,13 @@ function calculateScratchPercentage(canvas) {
 function playBirthdayVideo() {
     const videoContainer = document.getElementById('videoContainer');
     const video = document.getElementById('birthdayVideo');
+    
     videoContainer.classList.add('visible');
     video.play();
+    
+    video.addEventListener('ended', () => {
+        videoContainer.classList.remove('visible');
+    });
     
     for (let i = 0; i < 3; i++) {
         setTimeout(() => spawnConfetti(), i * 500);
@@ -89,7 +156,7 @@ function playBirthdayVideo() {
 
 // Card management functions
 function checkAllRevealed() {
-    if (revealedCount >= totalCards) {
+    if (revealedCount >= CARDS_PER_ROW) {
         revealedCount = 0;
         revealedSets++;
         
@@ -106,7 +173,7 @@ function checkAllRevealed() {
                 playBirthdayVideo();
             }, 2000);
         } else {
-            // Create new row of cards
+            // Create new row
             currentRow++;
             createNewRow();
         }
@@ -119,12 +186,13 @@ function createNewRow() {
     // Create row container
     const rowDiv = document.createElement('div');
     rowDiv.className = 'card-row';
+    rowDiv.setAttribute('data-row', currentRow);
     
     gallery.appendChild(rowDiv);
     
     // Add new cards to the row
     const shuffled = [...allImagePairs].sort(() => Math.random() - 0.5);
-    const selected = shuffled.slice(0, totalCards);
+    const selected = shuffled.slice(0, CARDS_PER_ROW);
     selected.forEach((pair, index) => {
         createScratchCard(pair, index, true, rowDiv);
     });
@@ -158,13 +226,12 @@ function createScratchCard(pair, index, animate = false, rowContainer) {
     requestAnimationFrame(updateBounce);
     
     const bottomImg = document.createElement('img');
-    bottomImg.src = pair.bottom;
+    bottomImg.src = pair.image;
     bottomImg.className = 'bottom-image';
-    bottomImg.alt = pair.caption;
     bottomImg.draggable = false;
     
     bottomImg.onerror = function() {
-        console.error(`Failed to load image: ${pair.bottom}`);
+        console.error(`Failed to load image: ${pair.image}`);
         this.src = 'fallback.jpg';
     };
     
@@ -177,25 +244,46 @@ function createScratchCard(pair, index, animate = false, rowContainer) {
     rowContainer.appendChild(container);
 
     let revealed = false;
-    const topImg = new Image();
-    topImg.crossOrigin = "anonymous";
+
+    // Draw colored rectangle with text instead of top image
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = pair.color;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    topImg.onerror = function() {
-        console.error(`Failed to load image: ${pair.top}`);
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#ff6b6b';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = 'white';
-        ctx.font = '20px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('Image failed to load', canvas.width/2, canvas.height/2);
-    };
+    // Add text
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 24px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
     
-    topImg.onload = () => {
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(topImg, 0, 0, canvas.width, canvas.height);
-    };
-    topImg.src = pair.top;
+    // Word wrap function
+    function wrapText(text, x, y, maxWidth, lineHeight) {
+        const words = text.split(' ');
+        let line = '';
+        let lines = [];
+
+        for(let n = 0; n < words.length; n++) {
+            const testLine = line + words[n] + ' ';
+            const metrics = ctx.measureText(testLine);
+            const testWidth = metrics.width;
+            
+            if (testWidth > maxWidth && n > 0) {
+                lines.push(line);
+                line = words[n] + ' ';
+            } else {
+                line = testLine;
+            }
+        }
+        lines.push(line);
+
+        // Draw each line
+        lines.forEach((line, i) => {
+            ctx.fillText(line.trim(), x, y + (i * lineHeight));
+        });
+    }
+
+    // Draw wrapped text
+    wrapText(pair.text, canvas.width/2, canvas.height/2, canvas.width - 40, 30);
 
     let isDrawing = false;
     
@@ -209,7 +297,7 @@ function createScratchCard(pair, index, animate = false, rowContainer) {
         
         ctx.globalCompositeOperation = 'destination-out';
         ctx.beginPath();
-        ctx.arc(x, y, 30, 0, Math.PI * 2);
+        ctx.arc(x, y, 50 , 0, Math.PI * 2);
         ctx.fill();
 
         const percentage = calculateScratchPercentage(canvas);
@@ -293,17 +381,4 @@ function createFloatingHead() {
 for (let i = 0; i < 15; i++) {
     setTimeout(() => createFloatingHead(), i * 200);
 }
-createInitialCards();
-
-function createInitialCards() {
-    const gallery = document.getElementById('gallery');
-    const rowDiv = document.createElement('div');
-    rowDiv.className = 'card-row';
-    gallery.appendChild(rowDiv);
-    
-    const shuffled = [...allImagePairs].sort(() => Math.random() - 0.5);
-    const selected = shuffled.slice(0, totalCards);
-    selected.forEach((pair, index) => {
-        createScratchCard(pair, index, true, rowDiv);
-    });
-}
+createNewRow(); // Start with first row
