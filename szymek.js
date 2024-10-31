@@ -6,7 +6,7 @@ let currentRow = 0;
 let isDrawing = false;
 let activeCanvas = null;
 const CARDS_PER_ROW = 3;
-const SETS_BEFORE_VIDEO = 5;
+const SETS_BEFORE_VIDEO = 4;
 
 // Text and color arrays
 const birthdayTexts = [
@@ -44,13 +44,13 @@ const cardColors = [
 ];
 
 // Generate image arrays with numbered format
-const allImagePairs = Array.from({ length: 14 }, (_, i) => ({
+const allImagePairs = Array.from({ length: 15 }, (_, i) => ({
     image: `${i + 1}.jpg`,
     text: birthdayTexts[i],
     color: cardColors[i]
 }));
 
-const headImages = Array.from({ length: 14 }, (_, i) => `${i + 1}.jpg`);
+const headImages = Array.from({ length: 15 }, (_, i) => `${i + 1}.jpg`);
 
 // Prevent right click and other interactions
 document.addEventListener('contextmenu', function(e) {
@@ -224,7 +224,7 @@ function checkAllRevealed() {
           container.style.pointerEvents = 'none';
       });
       
-      if (revealedSets >= SETS_BEFORE_VIDEO && !videoPlayed) {
+      if (revealedCount >= 13 && !videoPlayed) {
           videoPlayed = true;
           setTimeout(() => {
               playBirthdayVideo();
@@ -237,30 +237,52 @@ function checkAllRevealed() {
   }
 }
 
-function createNewRow() {
-  const gallery = document.getElementById('gallery');
-  
-  // Create row container
-  const rowDiv = document.createElement('div');
-  rowDiv.className = 'card-row';
-  rowDiv.setAttribute('data-row', currentRow);
-  
-  gallery.appendChild(rowDiv);
-  
-  // Add new cards to the row
-  const shuffled = [...allImagePairs].sort(() => Math.random() - 0.5);
-  const selected = shuffled.slice(0, CARDS_PER_ROW);
-  selected.forEach((pair, index) => {
-      createScratchCard(pair, index, true, rowDiv);
-  });
+// Add at the top with other initializations
+let usedImageIndices = new Set();
 
-  // Smooth scroll to the new row
-  setTimeout(() => {
-      rowDiv.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center'
-      });
-  }, 100);
+// Replace the createNewRow function with this updated version
+function createNewRow() {
+    const gallery = document.getElementById('gallery');
+    
+    // Create row container
+    const rowDiv = document.createElement('div');
+    rowDiv.className = 'card-row';
+    rowDiv.setAttribute('data-row', currentRow);
+    
+    gallery.appendChild(rowDiv);
+    
+    // Reset used images if we've used them all
+    if (usedImageIndices.size >= allImagePairs.length) {
+        usedImageIndices.clear();
+    }
+
+    // Get available images (ones we haven't used yet)
+    const availableImages = allImagePairs.filter((_, index) => !usedImageIndices.has(index));
+    
+    // Shuffle available images
+    const shuffled = [...availableImages].sort(() => Math.random() - 0.5);
+    
+    // Take the first CARDS_PER_ROW images
+    const selected = shuffled.slice(0, CARDS_PER_ROW);
+    
+    // Mark these images as used
+    selected.forEach(item => {
+        const index = allImagePairs.findIndex(pair => pair === item);
+        usedImageIndices.add(index);
+    });
+
+    // Create cards
+    selected.forEach((pair, index) => {
+        createScratchCard(pair, index, true, rowDiv);
+    });
+
+    // Smooth scroll to the new row
+    setTimeout(() => {
+        rowDiv.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center'
+        });
+    }, 100);
 }
 
 function createScratchCard(pair, index, animate = false, rowContainer) {
