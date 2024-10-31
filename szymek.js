@@ -44,6 +44,15 @@ const cardColors = [
   "#34495E"  // Navy
 ];
 
+function getTouchPos(touchEvent, canvas) {
+  const rect = canvas.getBoundingClientRect();
+  const touch = touchEvent.touches[0] || touchEvent.changedTouches[0];
+  return {
+    x: touch.clientX - rect.left,
+    y: touch.clientY - rect.top
+  };
+}
+
 // Generate image arrays with numbered format
 const allImagePairs = Array.from({ length: 15 }, (_, i) => ({
   image: `${i + 1}.jpg`,
@@ -121,16 +130,27 @@ function calculateScratchPercentage(canvas) {
   return (transparentPixels / (canvas.width * canvas.height)) * 100;
 }
 
-// Scratch handling function
+// Update handleScratch to support both mouse and touch
 function handleScratch(e) {
   if (!isDrawing) return;
 
-  // Get all scratch cards
+  // Prevent scrolling while scratching
+  e.preventDefault();
+
   const cards = document.querySelectorAll('.scratch-container canvas');
   cards.forEach(canvas => {
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+
+    // Get coordinates based on event type
+    let x, y;
+    if (e.type.includes('touch')) {
+      const touch = e.touches[0] || e.changedTouches[0];
+      x = touch.clientX - rect.left;
+      y = touch.clientY - rect.top;
+    } else {
+      x = e.clientX - rect.left;
+      y = e.clientY - rect.top;
+    }
 
     // Check if point is within canvas bounds
     if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
@@ -139,7 +159,7 @@ function handleScratch(e) {
 
       // Draw the scratch
       ctx.beginPath();
-      ctx.arc(x, y, 45, 0, Math.PI * 2);
+      ctx.arc(x, y, 30, 0, Math.PI * 2);
       ctx.fill();
 
       // For smooth line between points
@@ -163,7 +183,6 @@ function handleScratch(e) {
         if (percentage > 60) {
           container.revealed = true;
           revealedCount++;
-          totalRevealedCount++
           spawnConfetti();
           playYeeySound();
           checkAllRevealed();
@@ -176,7 +195,6 @@ function handleScratch(e) {
     }
   });
 }
-
 // Video handling
 function playBirthdayVideo() {
   const videoContainer = document.getElementById('videoContainer');
@@ -345,7 +363,7 @@ function createScratchCard(pair, index, animate = false, rowContainer) {
         ctx.fillText(line.trim(), x, y + (i * lineHeight));
       });
     } catch (e) {
-console.log("error")
+      console.log("error")
     }
   }
 
@@ -374,12 +392,18 @@ function createFloatingHead() {
   head.style.left = posX + 'px';
   head.style.top = posY + 'px';
 
-  head.addEventListener('click', () => {
+  function handleHeadInteraction() {
     spawnConfetti();
     playYeeySound();
     speedX *= 1.5;
     speedY *= 1.5;
-  });
+  }
+
+  head.addEventListener('click', handleHeadInteraction);
+  head.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    handleHeadInteraction();
+  }, { passive: false });
 
   function updatePosition() {
     posX += speedX;
@@ -414,7 +438,7 @@ function createFloatingHead() {
   document.body.appendChild(head);
 }
 
-// Global scratch event listeners
+// Mouse Events
 document.addEventListener('mousedown', (e) => {
   isDrawing = true;
   handleScratch(e);
@@ -431,6 +455,25 @@ document.addEventListener('mouseup', () => {
 document.addEventListener('mouseleave', () => {
   isDrawing = false;
 });
+
+// Touch Events
+document.addEventListener('touchstart', (e) => {
+  isDrawing = true;
+  handleScratch(e);
+}, { passive: false });
+
+document.addEventListener('touchmove', (e) => {
+  handleScratch(e);
+}, { passive: false });
+
+document.addEventListener('touchend', () => {
+  isDrawing = false;
+});
+
+document.addEventListener('touchcancel', () => {
+  isDrawing = false;
+});
+
 
 // Initialize everything
 for (let i = 0; i < 15; i++) {
