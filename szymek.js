@@ -3,8 +3,10 @@ let videoPlayed = false;
 let revealedCount = 0;
 let revealedSets = 0;
 let currentRow = 0;
+let isDrawing = false;
+let activeCanvas = null;
 const CARDS_PER_ROW = 3;
-const SETS_BEFORE_VIDEO = 4;
+const SETS_BEFORE_VIDEO = 2;
 
 // Text and color arrays
 const birthdayTexts = [
@@ -41,7 +43,7 @@ const cardColors = [
     "#34495E"  // Navy
 ];
 
-// Generate image array with numbered format
+// Generate image arrays with numbered format
 const allImagePairs = Array.from({ length: 14 }, (_, i) => ({
     image: `${i + 1}.jpg`,
     text: birthdayTexts[i],
@@ -137,248 +139,288 @@ function calculateScratchPercentage(canvas) {
     return (transparentPixels / (canvas.width * canvas.height)) * 100;
 }
 
+// Scratch handling function
+function handleScratch(e) {
+  if (!isDrawing) return;
+
+  // Get all scratch cards
+  const cards = document.querySelectorAll('.scratch-container canvas');
+  cards.forEach(canvas => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      // Check if point is within canvas bounds
+      if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
+          const ctx = canvas.getContext('2d');
+          ctx.globalCompositeOperation = 'destination-out';
+          
+          // Draw the scratch
+          ctx.beginPath();
+          ctx.arc(x, y, 30, 0, Math.PI * 2);
+          ctx.fill();
+
+          // For smooth line between points
+          if (canvas.lastX !== undefined && canvas.lastY !== undefined) {
+              ctx.beginPath();
+              ctx.lineWidth = 60;
+              ctx.lineCap = 'round';
+              ctx.moveTo(canvas.lastX, canvas.lastY);
+              ctx.lineTo(x, y);
+              ctx.stroke();
+          }
+
+          canvas.lastX = x;
+          canvas.lastY = y;
+
+          // Check completion
+          const container = canvas.parentElement;
+          const dataRow = container.getAttribute('data-row');
+          if (dataRow === currentRow.toString() && !container.revealed) {
+              const percentage = calculateScratchPercentage(canvas);
+              if (percentage > 60) {
+                  container.revealed = true;
+                  revealedCount++;
+                  spawnConfetti();
+                  playYeeySound();
+                  checkAllRevealed();
+              }
+          }
+      } else {
+          // Reset last position when moving outside a canvas
+          canvas.lastX = undefined;
+          canvas.lastY = undefined;
+      }
+  });
+}
+
 // Video handling
 function playBirthdayVideo() {
-    const videoContainer = document.getElementById('videoContainer');
-    const video = document.getElementById('birthdayVideo');
-    
-    videoContainer.classList.add('visible');
-    video.play();
-    
-    video.addEventListener('ended', () => {
-        videoContainer.classList.remove('visible');
-    });
-    
-    for (let i = 0; i < 3; i++) {
-        setTimeout(() => spawnConfetti(), i * 500);
-    }
+  const videoContainer = document.getElementById('videoContainer');
+  const video = document.getElementById('birthdayVideo');
+  
+  videoContainer.classList.add('visible');
+  video.play();
+  
+  video.addEventListener('ended', () => {
+      videoContainer.classList.remove('visible');
+  });
+  
+  for (let i = 0; i < 3; i++) {
+      setTimeout(() => spawnConfetti(), i * 500);
+  }
 }
 
 // Card management functions
 function checkAllRevealed() {
-    if (revealedCount >= CARDS_PER_ROW) {
-        revealedCount = 0;
-        revealedSets++;
-        
-        // Get current cards and make them spin
-        const currentCards = document.querySelectorAll(`.scratch-container[data-row="${currentRow}"]`);
-        currentCards.forEach(container => {
-            container.classList.add('spinning');
-            container.style.pointerEvents = 'none';
-        });
-        
-        if (revealedSets >= SETS_BEFORE_VIDEO && !videoPlayed) {
-            videoPlayed = true;
-            setTimeout(() => {
-                playBirthdayVideo();
-            }, 2000);
-        } else {
-            // Create new row
-            currentRow++;
-            createNewRow();
-        }
-    }
+  if (revealedCount >= CARDS_PER_ROW) {
+      revealedCount = 0;
+      revealedSets++;
+      
+      // Get current cards and make them spin
+      const currentCards = document.querySelectorAll(`.scratch-container[data-row="${currentRow}"]`);
+      currentCards.forEach(container => {
+          container.classList.add('spinning');
+          container.style.pointerEvents = 'none';
+      });
+      
+      if (revealedSets >= SETS_BEFORE_VIDEO && !videoPlayed) {
+          videoPlayed = true;
+          setTimeout(() => {
+              playBirthdayVideo();
+          }, 2000);
+      } else {
+          // Create new row
+          currentRow++;
+          createNewRow();
+      }
+  }
 }
 
 function createNewRow() {
-    const gallery = document.getElementById('gallery');
-    
-    // Create row container
-    const rowDiv = document.createElement('div');
-    rowDiv.className = 'card-row';
-    rowDiv.setAttribute('data-row', currentRow);
-    
-    gallery.appendChild(rowDiv);
-    
-    // Add new cards to the row
-    const shuffled = [...allImagePairs].sort(() => Math.random() - 0.5);
-    const selected = shuffled.slice(0, CARDS_PER_ROW);
-    selected.forEach((pair, index) => {
-        createScratchCard(pair, index, true, rowDiv);
-    });
+  const gallery = document.getElementById('gallery');
+  
+  // Create row container
+  const rowDiv = document.createElement('div');
+  rowDiv.className = 'card-row';
+  rowDiv.setAttribute('data-row', currentRow);
+  
+  gallery.appendChild(rowDiv);
+  
+  // Add new cards to the row
+  const shuffled = [...allImagePairs].sort(() => Math.random() - 0.5);
+  const selected = shuffled.slice(0, CARDS_PER_ROW);
+  selected.forEach((pair, index) => {
+      createScratchCard(pair, index, true, rowDiv);
+  });
 
-    // Smooth scroll to the new row
-    setTimeout(() => {
-        rowDiv.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center'
-        });
-    }, 100);
+  // Smooth scroll to the new row
+  setTimeout(() => {
+      rowDiv.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center'
+      });
+  }, 100);
 }
 
 function createScratchCard(pair, index, animate = false, rowContainer) {
-    const container = document.createElement('div');
-    container.className = 'scratch-container';
-    if (animate) container.classList.add('slide-in');
-    container.setAttribute('data-row', currentRow);
-    
-    let time = index * 1000;
+  const container = document.createElement('div');
+  container.className = 'scratch-container';
+  if (animate) container.classList.add('slide-in');
+  container.setAttribute('data-row', currentRow);
+  
+  let time = index * 1000;
 
-    function updateBounce() {
-        if (!container.classList.contains('spinning')) {
-            time += 0.05;
-            const newY = Math.sin(time) * 20;
-            container.style.transform = `translateY(${newY}px)`;
-        }
-        requestAnimationFrame(updateBounce);
-    }
+  function updateBounce() {
+      if (!container.classList.contains('spinning')) {
+          time += 0.05;
+          const newY = Math.sin(time) * 20;
+          container.style.transform = `translateY(${newY}px)`;
+      }
+      requestAnimationFrame(updateBounce);
+  }
 
-    requestAnimationFrame(updateBounce);
-    
-    const bottomImg = document.createElement('img');
-    bottomImg.src = pair.image;
-    bottomImg.className = 'bottom-image';
-    bottomImg.draggable = false;
-    
-    bottomImg.onerror = function() {
-        console.error(`Failed to load image: ${pair.image}`);
-        this.src = 'fallback.jpg';
-    };
-    
-    const canvas = document.createElement('canvas');
-    canvas.width = 300;
-    canvas.height = 300;
-    
-    container.appendChild(bottomImg);
-    container.appendChild(canvas);
-    rowContainer.appendChild(container);
+  requestAnimationFrame(updateBounce);
+  
+  const bottomImg = document.createElement('img');
+  bottomImg.src = pair.image;
+  bottomImg.className = 'bottom-image';
+  bottomImg.draggable = false;
+  
+  bottomImg.onerror = function() {
+      console.error(`Failed to load image: ${pair.image}`);
+      this.src = 'fallback.jpg';
+  };
+  
+  const canvas = document.createElement('canvas');
+  canvas.width = 300;
+  canvas.height = 300;
+  
+  container.appendChild(bottomImg);
+  container.appendChild(canvas);
+  rowContainer.appendChild(container);
 
-    let revealed = false;
+  // Draw colored rectangle with text
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = pair.color;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Add text
+  ctx.fillStyle = 'white';
+  ctx.font = 'bold 24px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  
+  // Word wrap function
+  function wrapText(text, x, y, maxWidth, lineHeight) {
+      const words = text.split(' ');
+      let line = '';
+      let lines = [];
 
-    // Draw colored rectangle with text instead of top image
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = pair.color;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Add text
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 24px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    
-    // Word wrap function
-    function wrapText(text, x, y, maxWidth, lineHeight) {
-        const words = text.split(' ');
-        let line = '';
-        let lines = [];
+      for(let n = 0; n < words.length; n++) {
+          const testLine = line + words[n] + ' ';
+          const metrics = ctx.measureText(testLine);
+          const testWidth = metrics.width;
+          
+          if (testWidth > maxWidth && n > 0) {
+              lines.push(line);
+              line = words[n] + ' ';
+          } else {
+              line = testLine;
+          }
+      }
+      lines.push(line);
 
-        for(let n = 0; n < words.length; n++) {
-            const testLine = line + words[n] + ' ';
-            const metrics = ctx.measureText(testLine);
-            const testWidth = metrics.width;
-            
-            if (testWidth > maxWidth && n > 0) {
-                lines.push(line);
-                line = words[n] + ' ';
-            } else {
-                line = testLine;
-            }
-        }
-        lines.push(line);
+      lines.forEach((line, i) => {
+          ctx.fillText(line.trim(), x, y + (i * lineHeight));
+      });
+  }
 
-        // Draw each line
-        lines.forEach((line, i) => {
-            ctx.fillText(line.trim(), x, y + (i * lineHeight));
-        });
-    }
-
-    // Draw wrapped text
-    wrapText(pair.text, canvas.width/2, canvas.height/2, canvas.width - 40, 30);
-
-    let isDrawing = false;
-    
-    function scratch(e) {
-        if (!isDrawing) return;
-        
-        const ctx = canvas.getContext('2d');
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.beginPath();
-        ctx.arc(x, y, 50 , 0, Math.PI * 2);
-        ctx.fill();
-
-        const percentage = calculateScratchPercentage(canvas);
-        if (percentage > 60 && !revealed) {
-            revealed = true;
-            revealedCount++;
-            spawnConfetti();
-            playYeeySound();
-            checkAllRevealed();
-        }
-    }
-
-    canvas.addEventListener('mousedown', () => isDrawing = true);
-    canvas.addEventListener('mousemove', scratch);
-    canvas.addEventListener('mouseup', () => isDrawing = false);
-    canvas.addEventListener('mouseleave', () => isDrawing = false);
+  // Draw wrapped text
+  wrapText(pair.text, canvas.width/2, canvas.height/2, canvas.width - 40, 30);
 }
 
 function createFloatingHead() {
-    const head = document.createElement('img');
-    head.className = 'floating-head';
-    head.src = headImages[Math.floor(Math.random() * headImages.length)];
-    head.draggable = false;
-    
-    head.onerror = function() {
-        console.error(`Failed to load head image: ${head.src}`);
-        this.src = 'fallback.jpg';
-    };
-    
-    let posX = Math.random() * (window.innerWidth - 50);
-    let posY = Math.random() * (window.innerHeight - 50);
-    let speedX = (Math.random() - 0.5) * 8;
-    let speedY = (Math.random() - 0.5) * 8;
-    let rotation = 0;
-    let rotationSpeed = (Math.random() - 0.5) * 4;
-    
-    head.style.left = posX + 'px';
-    head.style.top = posY + 'px';
-    
-    head.addEventListener('click', () => {
-        spawnConfetti();
-        playYeeySound();
-        speedX *= 1.5;
-        speedY *= 1.5;
-    });
+  const head = document.createElement('img');
+  head.className = 'floating-head';
+  head.src = headImages[Math.floor(Math.random() * headImages.length)];
+  head.draggable = false;
+  
+  head.onerror = function() {
+      console.error(`Failed to load head image: ${head.src}`);
+      this.src = 'fallback.jpg';
+  };
+  
+  let posX = Math.random() * (window.innerWidth - 50);
+  let posY = Math.random() * (window.innerHeight - 50);
+  let speedX = (Math.random() - 0.5) * 8;
+  let speedY = (Math.random() - 0.5) * 8;
+  let rotation = 0;
+  let rotationSpeed = (Math.random() - 0.5) * 4;
+  
+  head.style.left = posX + 'px';
+  head.style.top = posY + 'px';
+  
+  head.addEventListener('click', () => {
+      spawnConfetti();
+      playYeeySound();
+      speedX *= 1.5;
+      speedY *= 1.5;
+  });
 
-    function updatePosition() {
-        posX += speedX;
-        posY += speedY;
+  function updatePosition() {
+      posX += speedX;
+      posY += speedY;
 
-        if (posX <= 0 || posX >= window.innerWidth - 50) {
-            speedX = -speedX * 0.9;
-            posX = posX <= 0 ? 0 : window.innerWidth - 50;
-        }
-        if (posY <= 0 || posY >= window.innerHeight - 50) {
-            speedY = -speedY * 0.9;
-            posY = posY <= 0 ? 0 : window.innerHeight - 50;
-        }
+      if (posX <= 0 || posX >= window.innerWidth - 50) {
+          speedX = -speedX * 0.9;
+          posX = posX <= 0 ? 0 : window.innerWidth - 50;
+      }
+      if (posY <= 0 || posY >= window.innerHeight - 50) {
+          speedY = -speedY * 0.9;
+          posY = posY <= 0 ? 0 : window.innerHeight - 50;
+      }
 
-        rotation += rotationSpeed;
-        head.style.left = posX + 'px';
-        head.style.top = posY + 'px';
-        head.style.transform = `rotate(${rotation}deg)`;
+      rotation += rotationSpeed;
+      head.style.left = posX + 'px';
+      head.style.top = posY + 'px';
+      head.style.transform = `rotate(${rotation}deg)`;
 
-        if (Math.random() < 0.02) {
-            speedX += (Math.random() - 0.5) * 2;
-            speedY += (Math.random() - 0.5) * 2;
-        }
+      if (Math.random() < 0.02) {
+          speedX += (Math.random() - 0.5) * 2;
+          speedY += (Math.random() - 0.5) * 2;
+      }
 
-        speedX *= 0.995;
-        speedY *= 0.995;
+      speedX *= 0.995;
+      speedY *= 0.995;
 
-        requestAnimationFrame(updatePosition);
-    }
+      requestAnimationFrame(updatePosition);
+  }
 
-    requestAnimationFrame(updatePosition);
-    document.body.appendChild(head);
+  requestAnimationFrame(updatePosition);
+  document.body.appendChild(head);
 }
+
+// Global scratch event listeners
+document.addEventListener('mousedown', (e) => {
+  isDrawing = true;
+  handleScratch(e);
+});
+
+document.addEventListener('mousemove', (e) => {
+  handleScratch(e);
+});
+
+document.addEventListener('mouseup', () => {
+  isDrawing = false;
+});
+
+document.addEventListener('mouseleave', () => {
+  isDrawing = false;
+});
 
 // Initialize everything
 for (let i = 0; i < 15; i++) {
-    setTimeout(() => createFloatingHead(), i * 200);
+  setTimeout(() => createFloatingHead(), i * 200);
 }
 createNewRow(); // Start with first row
