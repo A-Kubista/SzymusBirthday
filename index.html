@@ -20,6 +20,7 @@
       animation: bounce 1s infinite;
       margin: 20px;
       text-align: center;
+      z-index: 100;
     }
 
     .subtitle {
@@ -28,6 +29,7 @@
       font-size: 1.5em;
       text-align: center;
       margin: 10px;
+      z-index: 100;
     }
 
     .gallery {
@@ -37,6 +39,30 @@
       gap: 20px;
       padding: 20px;
       max-width: 1200px;
+      z-index: 50;
+    }
+
+    .video-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+    }
+
+    .video-container.visible {
+      display: flex;
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    .video-player {
+      max-width: 90%;
+      max-height: 90vh;
     }
 
     .scratch-container {
@@ -71,26 +97,11 @@
       cursor: pointer;
       z-index: 1000;
       transition: transform 0.3s;
+      pointer-events: all;
     }
 
     .floating-head:hover {
       transform: scale(1.2);
-    }
-
-    .birthday-btn {
-      padding: 15px 30px;
-      font-size: 1.2em;
-      background: #4ecdc4;
-      border: none;
-      border-radius: 25px;
-      color: white;
-      cursor: pointer;
-      margin: 20px;
-      transition: transform 0.3s;
-    }
-
-    .birthday-btn:hover {
-      transform: scale(1.1);
     }
 
     .confetti {
@@ -98,184 +109,60 @@
       width: 10px;
       height: 10px;
       pointer-events: none;
+      z-index: 1500;
     }
 
     @keyframes bounce {
       0%, 100% { transform: translateY(0); }
       50% { transform: translateY(-20px); }
     }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateY(-100vh) rotate(360deg);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+      }
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg) scale(1); }
+      50% { transform: rotate(180deg) scale(0.8); }
+      100% { transform: rotate(360deg) scale(1); }
+    }
+
+    .slide-in {
+      animation: slideIn 1s ease-out;
+    }
+
+    .spinning {
+      animation: spin 2s infinite linear !important;
+    }
   </style>
 </head>
 <body>
   <h1 class="title">🎉 Happy Birthday Szymek! 🎉</h1>
   <p class="subtitle">Use your mouse to scratch and reveal funny pictures! 🖱️</p>
-  <button class="birthday-btn" onclick="spawnConfetti()">Click for Birthday Magic! 🎈</button>
 
   <div class="gallery" id="gallery"></div>
+  
+  <div class="video-container" id="videoContainer">
+    <video class="video-player" id="birthdayVideo" controls>
+      <source src="YOUR_VIDEO_URL.mp4" type="video/mp4">
+      Your browser does not support the video tag.
+    </video>
+  </div>
 
   <audio id="yeeySound" src="https://cdn.freesound.org/previews/612/612095_5674468-lq.mp3"></audio>
 
-  <script>
-    // Image pairs - top layer and bottom layer
-    const imagePairs = [
-      {
-        top: "https://cdn.pixabay.com/photo/2016/12/13/05/15/puppy-1903313_1280.jpg",
-        bottom: "https://cdn.pixabay.com/photo/2019/11/08/11/56/cat-4611189_1280.jpg",
-        caption: "Expectations vs Reality"
-      },
-      {
-        top: "https://cdn.pixabay.com/photo/2017/09/25/13/12/cocker-spaniel-2785074_1280.jpg",
-        bottom: "https://cdn.pixabay.com/photo/2020/03/31/19/20/dog-4988985_1280.jpg",
-        caption: "Morning vs Evening"
-      },
-      {
-        top: "https://cdn.pixabay.com/photo/2016/12/13/05/15/puppy-1903313_1280.jpg",
-        bottom: "https://cdn.pixabay.com/photo/2015/11/17/13/13/doge-1047521_1280.jpg",
-        caption: "Instagram vs Tagged"
-      }
-    ];
-
-    // Create floating heads
-    function createFloatingHead() {
-      const head = document.createElement('img');
-      head.className = 'floating-head';
-      head.src = "https://cdn.pixabay.com/photo/2016/12/13/05/15/puppy-1903313_1280.jpg"; // Replace with Szymek's head picture
-      head.style.left = Math.random() * (window.innerWidth - 50) + 'px';
-      head.style.top = Math.random() * (window.innerHeight - 50) + 'px';
-      
-      let dx = (Math.random() - 0.5) * 4;
-      let dy = (Math.random() - 0.5) * 4;
-      
-      head.addEventListener('click', () => {
-        spawnConfetti();
-        playYeeySound();
-      });
-
-      setInterval(() => {
-        let rect = head.getBoundingClientRect();
-        if (rect.left + dx < 0 || rect.right + dx > window.innerWidth) dx = -dx;
-        if (rect.top + dy < 0 || rect.bottom + dy > window.innerHeight) dy = -dy;
-        
-        head.style.left = (rect.left + dx) + 'px';
-        head.style.top = (rect.top + dy) + 'px';
-      }, 16);
-
-      document.body.appendChild(head);
-    }
-
-    // Create multiple floating heads
-    for (let i = 0; i < 5; i++) {
-      createFloatingHead();
-    }
-
-    // Create scratch card for each image pair
-    imagePairs.forEach((pair, index) => {
-      createScratchCard(pair, index);
-    });
-
-    function calculateScratchPercentage(canvas) {
-      const ctx = canvas.getContext('2d');
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const pixels = imageData.data;
-      let transparentPixels = 0;
-      
-      for (let i = 3; i < pixels.length; i += 4) {
-        if (pixels[i] === 0) transparentPixels++;
-      }
-      
-      return (transparentPixels / (canvas.width * canvas.height)) * 100;
-    }
-
-    function playYeeySound() {
-      const sound = document.getElementById('yeeySound');
-      sound.currentTime = 0;
-      sound.play();
-    }
-
-    function createScratchCard(pair, index) {
-      const container = document.createElement('div');
-      container.className = 'scratch-container';
-      container.style.animationDelay = `${index * 0.2}s`;
-      
-      const bottomImg = document.createElement('img');
-      bottomImg.src = pair.bottom;
-      bottomImg.className = 'bottom-image';
-      bottomImg.alt = pair.caption;
-      
-      const canvas = document.createElement('canvas');
-      canvas.width = 300;
-      canvas.height = 300;
-      
-      container.appendChild(bottomImg);
-      container.appendChild(canvas);
-      document.getElementById('gallery').appendChild(container);
-
-      let revealed = false;
-      const topImg = new Image();
-      topImg.crossOrigin = "anonymous";
-      topImg.onload = () => {
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(topImg, 0, 0, canvas.width, canvas.height);
-      };
-      topImg.src = pair.top;
-
-      let isDrawing = false;
-      
-      function scratch(e) {
-        if (!isDrawing) return;
-        
-        const ctx = canvas.getContext('2d');
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.beginPath();
-        ctx.arc(x, y, 20, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Check scratch percentage
-        const percentage = calculateScratchPercentage(canvas);
-        if (percentage > 60 && !revealed) {
-          revealed = true;
-          spawnConfetti();
-          playYeeySound();
-        }
-      }
-
-      canvas.addEventListener('mousedown', () => isDrawing = true);
-      canvas.addEventListener('mousemove', scratch);
-      canvas.addEventListener('mouseup', () => isDrawing = false);
-      canvas.addEventListener('mouseleave', () => isDrawing = false);
-    }
-
-    function spawnConfetti() {
-      for (let i = 0; i < 50; i++) {
-        createConfetti();
-      }
-    }
-
-    function createConfetti() {
-      const colors = ['#ff6b6b', '#4ecdc4', '#ffbe0b', '#ff006e', '#8338ec'];
-      const confetti = document.createElement('div');
-      confetti.className = 'confetti';
-      confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-      confetti.style.left = Math.random() * window.innerWidth + 'px';
-      confetti.style.top = '-10px';
-      confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
-      
-      document.body.appendChild(confetti);
-
-      const animation = confetti.animate([
-        { transform: `translate(0, 0) rotate(0deg)`, opacity: 1 },
-        { transform: `translate(${Math.random() * 300 - 150}px, ${window.innerHeight + 10}px) rotate(${Math.random() * 720}deg)`, opacity: 0 }
-      ], {
-        duration: Math.random() * 2000 + 1500,
-        easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
-      });
-
-      animation.onfinish = () => confetti.remove();
-    }
-  </script>
+  <script src="szymek.js"></script>
 </body>
 </html>
