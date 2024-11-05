@@ -78,13 +78,13 @@ function getTouchPos(touchEvent, canvas) {
 }
 
 // Generate image arrays with numbered format
-const allImagePairs = Array.from({ length: 28 }, (_, i) => ({
+const allImagePairs = Array.from({ length: 25 }, (_, i) => ({
   image: `${i + 1}.jpg`,
   text: birthdayTexts[i],
   color: cardColors[i]
 }));
 
-const headImages = Array.from({ length: 28 }, (_, i) => `${i + 1}.jpg`);
+const headImages = Array.from({ length: 25 }, (_, i) => `${i + 1}.jpg`);
 
 // Prevent right click and other interactions
 document.addEventListener('contextmenu', function (e) {
@@ -275,7 +275,7 @@ function checkAllRevealed() {
   // Check if it's time to play a video
 
    // Check if 28 cards have been cleared
-  if (totalRevealedCount >= 28) {
+  if (totalRevealedCount >= 25) {
     setTimeout(showGoodbyeText, 1000); // Show goodbye text after a short delay
   }else {
   if (totalRevealedCount % SCRATCHES_BEFORE_VIDEO === 0) {
