@@ -8,23 +8,47 @@ let isDrawing = false;
 let activeCanvas = null;
 const CARDS_PER_ROW = 3;
 const SETS_BEFORE_VIDEO = 4;
+const SCRATCHES_BEFORE_VIDEO = 4;
 
-// Text and color arrays
+// Video array
+const videos = ['v1.mp4', 'v2.mp4', 'v3.mp4','v4.mp4', 'v5.mp4', 'v6.mp4'];
+
 const birthdayTexts = [
-  "Happy Birthday Szymek! 🎉",
-  "You're Awesome! 🌟",
-  "Best Friend Ever! 🎈",
-  "Party Time! 🎊",
-  "Make a Wish! ⭐",
-  "Birthday Boy! 🎂",
-  "Celebrate Good Times! 🎵",
-  "Another Amazing Year! 🎁",
-  "Keep Smiling! 😊",
-  "You Rock! 🤘",
-  "Time to Celebrate! 🥳",
-  "Birthday Legend! 👑",
-  "Special Day! 💫",
-  "Fantastic Friend! 🌈"
+  "Wysokich szczytów i bezpiecznych powrotów! 🏔️🧗‍♂️",
+  "Niech kod zawsze się kompiluje za pierwszym razem! 💻✨",
+  "Nowych szlaków i niesamowitych widoków! 🌎✈️",
+  "Żeby każdy commit był bez bugów! 🐛✅",
+  "Kolejnego tysiąca zdobytych szczytów! 🏔️💪",
+  "Zawsze pewnej asekuracji i dobrych chwytów! 🧗‍♂️🪢",
+  "Programowania z widokiem na góry! 💻🏔️",
+  "Niezapomnianych przygód w każdym zakątku świata! 🌍🎒",
+  "Stack overflow niech zawsze ma rozwiązanie! 👨‍💻🔍",
+  "Magnezyji nigdy nie brakuje! 🧗‍♂️✨",
+  "Git push do szczęścia i sukcesu! 🚀💫",
+  "Dalekich podróży i bliskich przyjaźni! ✈️❤️",
+  "Żeby każdy route był w Twoim zasięgu! 🎯🧗‍♂️",
+  "Czystego kodu i pięknych widoków! 💻🌅",
+  "Niech Twoje API nigdy nie crashuje! 🔧✨",
+  "Najlepszych wspomnień z każdej wyprawy! 🎒📸",
+  "Błękitnego nieba na każdej wspinaczce! ☀️🏔️",
+  "Debugowania życia z uśmiechem! 😊💻",
+  "Nowych projektów i wysokich lotów! 🚀💫",
+  "Bezawaryjnego życiowego deploymentu! 🎯✨",
+  "Zawsze zielonego pipe w CI/CD życia! 🟢🔄",
+  "Energii na każdą górską trasę! 🏃‍♂️🏔️",
+  "Commit do szczęścia każdego dnia! 💝💻",
+  "Odkrywaj nowe szczyty możliwości! 🧗‍♂️🌟",
+  "Pull request do marzeń zaakceptowany! ✅💫",
+  "Programowania szczęścia na produkcji życia! 🎮💻",
+  "Niech każda podróż będzie epicka! 🌎✈️",
+  "Zero bugów w kodzie życia! 🐛❌",
+  "Wspinaj się po szczeblach kariery! 🪜⭐",
+  "Zawsze stabilnego internetu w podróży! 📶🌍",
+  "Merge konfliktów z szczęściem! 🎯💫",
+  "Backupów dobrych wspomnień! 💾💖",
+  "Refaktoryzacji marzeń w rzeczywistość! 🎯✨",
+  "Wysokiego uptime'u szczęścia! ⚡💫",
+  "Optymalizacji radości każdego dnia! 🎨💝"
 ];
 
 const cardColors = [
@@ -54,13 +78,13 @@ function getTouchPos(touchEvent, canvas) {
 }
 
 // Generate image arrays with numbered format
-const allImagePairs = Array.from({ length: 15 }, (_, i) => ({
+const allImagePairs = Array.from({ length: 28 }, (_, i) => ({
   image: `${i + 1}.jpg`,
   text: birthdayTexts[i],
   color: cardColors[i]
 }));
 
-const headImages = Array.from({ length: 15 }, (_, i) => `${i + 1}.jpg`);
+const headImages = Array.from({ length: 28 }, (_, i) => `${i + 1}.jpg`);
 
 // Prevent right click and other interactions
 document.addEventListener('contextmenu', function (e) {
@@ -73,7 +97,22 @@ document.addEventListener('dragstart', function (e) {
   return false;
 });
 
+function showGoodbyeText() {
+  const goodbyeOverlay = document.createElement('div');
+  goodbyeOverlay.className = 'goodbye-overlay';
+  goodbyeOverlay.innerHTML = `
+    <div class="goodbye-text">
+      <h1>Przytulice <br>Szymka!</h1>
+    </div>
+  `;
+  document.body.appendChild(goodbyeOverlay);
 
+  // Add some confetti for extra celebration
+  for (let i = 0; i < 200; i++) {
+    setTimeout(() => spawnConfetti(), i * 100);
+  }
+
+}
 
 // Add click handler to close video manually
 document.querySelector('.video-container').addEventListener('click', (e) => {
@@ -85,6 +124,7 @@ document.querySelector('.video-container').addEventListener('click', (e) => {
 // Utility functions
 function playYeeySound() {
   const sound = document.getElementById('yeeySound');
+  sound.volume = 0.1;
   sound.currentTime = 0;
   sound.play();
 }
@@ -159,7 +199,7 @@ function handleScratch(e) {
 
       // Draw the scratch
       ctx.beginPath();
-      ctx.arc(x, y, 30, 0, Math.PI * 2);
+      ctx.arc(x, y, 50, 0, Math.PI * 2);
       ctx.fill();
 
       // For smooth line between points
@@ -183,6 +223,7 @@ function handleScratch(e) {
         if (percentage > 60) {
           container.revealed = true;
           revealedCount++;
+          totalRevealedCount++;
           spawnConfetti();
           playYeeySound();
           checkAllRevealed();
@@ -197,11 +238,26 @@ function handleScratch(e) {
 }
 // Video handling
 function playBirthdayVideo() {
-  const videoContainer = document.getElementById('videoContainer');
+ const videoContainer = document.getElementById('videoContainer');
   const video = document.getElementById('birthdayVideo');
+  const videoSource = document.getElementById('videoSource');
+
+  // Select the next video
+  const videoIndex = videoPlayed % videos.length;
+  videoSource.src = videos[videoIndex];
+  video.load(); // Reload the video element to reflect the new source
 
   videoContainer.classList.add('visible');
-  video.play();
+
+  // Add muted attribute for autoplay to work on most browsers
+  video.muted = true;
+  video.play().then(() => {
+    // Unmute after playback has started
+    video.muted = false;
+  }).catch(error => {
+    console.error("Autoplay was prevented:", error);
+    // Show a play button or instructions to the user
+  });
 
   video.addEventListener('ended', () => {
     videoContainer.classList.remove('visible');
@@ -210,16 +266,23 @@ function playBirthdayVideo() {
   for (let i = 0; i < 3; i++) {
     setTimeout(() => spawnConfetti(), i * 500);
   }
+
+  videoPlayed++;
 }
 
 // Card management functions
 function checkAllRevealed() {
-  if (totalRevealedCount >= 13 && !videoPlayed) {
-    videoPlayed = true;
-    setTimeout(() => {
-      playBirthdayVideo();
-    }, 2000);
+  // Check if it's time to play a video
+
+   // Check if 28 cards have been cleared
+  if (totalRevealedCount >= 28) {
+    setTimeout(showGoodbyeText, 1000); // Show goodbye text after a short delay
+  }else {
+  if (totalRevealedCount % SCRATCHES_BEFORE_VIDEO === 0) {
+    playBirthdayVideo();
   }
+
+
 
   console.log("revealedCount" + revealedCount, selected.length)
   if (revealedCount >= selected.length) {
@@ -237,6 +300,7 @@ function checkAllRevealed() {
     currentRow++;
     createNewRow();
 
+  }
   }
 }
 
@@ -316,7 +380,6 @@ function createScratchCard(pair, index, animate = false, rowContainer) {
 
   bottomImg.onerror = function () {
     console.error(`Failed to load image: ${pair.image}`);
-    this.src = 'fallback.jpg';
   };
 
   const canvas = document.createElement('canvas');
@@ -379,7 +442,6 @@ function createFloatingHead() {
 
   head.onerror = function () {
     console.error(`Failed to load head image: ${head.src}`);
-    this.src = 'fallback.jpg';
   };
 
   let posX = Math.random() * (window.innerWidth - 50);
